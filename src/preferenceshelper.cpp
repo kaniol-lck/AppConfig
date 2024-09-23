@@ -19,7 +19,7 @@ void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, bool sh
 {
     auto model = new QStandardItemModel(this);
     view->setModel(model);
-    makeView(node, view, model, "", showTitle);
+    makeTableView(node, view, model, "", "", showTitle);
 
     view->horizontalHeader()->setVisible(false);
     view->verticalHeader()->setVisible(false);
@@ -28,16 +28,19 @@ void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, bool sh
     view->setEditTriggers(QAbstractItemView::NoEditTriggers);
 }
 
-void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, QStandardItemModel *model, const QString &prefix, bool showTitle)
+void PreferencesHelper::makeTableView(PreferenceNode *node, QTableView *view, QStandardItemModel *model, const QString &prefix, const QString &namePrefix, bool showTitle)
 {
     auto key = node->key_;
     if(!prefix.isEmpty())
         key.prepend(prefix + "/");
+    auto name = node->name_;
+    if(!namePrefix.isEmpty())
+        name.prepend(namePrefix + " / ");
     // qDebug() << key;
     if(!node->widgetConfig_){
         //title - group
         if(showTitle){
-            auto item = new QStandardItem(node->name_);
+            auto item = new QStandardItem(name);
             if(node->checkable_){
                 item->setCheckable(true);
                 if(settings_->value(key, node->defaultVal_).toBool())
@@ -52,7 +55,7 @@ void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, QStanda
         }
 
         for(auto subNode : node->list_)
-            makeView(subNode, view, model, key, true);
+            makeTableView(subNode, view, model, key, name, true);
     } else{
         auto item1 = new QStandardItem(node->name_);
         auto item2 = new QStandardItem();

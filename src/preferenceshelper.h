@@ -33,7 +33,7 @@ signals:
 private:
     QSettings *settings_;
 
-    void makeView(PreferenceNode *node, QTableView *view, QStandardItemModel *model, const QString &prefix, bool showTitle);
+    void makeTableView(PreferenceNode *node, QTableView *view, QStandardItemModel *model, const QString &prefix, const QString &namePrefix, bool showTitle);
     void makeTreeView(PreferenceNode *node, QTreeView *view, QStandardItemModel *model, QModelIndex index, const QString &prefix, bool showTitle);
     void makeLayout(PreferenceNode *node, QWidget *parentWidget, QFormLayout *layout, const QString &prefix, bool showTitle);
 };
