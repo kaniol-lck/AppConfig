@@ -4,11 +4,12 @@
 
 #include <QTableView>
 #include <QTreeView>
-#include <QHeaderView>
 #include <QScrollArea>
 #include <QPushButton>
 #include <QListWidget>
 #include <QStackedWidget>
+#include <QVBoxLayout>
+#include <QSpinBox>
 
 PrHp::PrHp(QWidget *parent)
     : QMainWindow(parent)
@@ -76,6 +77,11 @@ PrHp::PrHp(QWidget *parent)
     // template configs
     LineEditConfig lineEditConfig;
     SpinBoxConfig spinBoxConfig;
+    spinBoxConfig.setAttr([](auto *widget){
+        QSpinBox *spinBox = qobject_cast<QSpinBox*>(widget);
+        spinBox->setMinimum(0);
+        spinBox->setMaximum(25);
+    });
     CheckBoxConfig checkBoxConfig;
     ComboBoxConfig comboBoxConfig1({ "item1", "item2", "item3" });
     ComboBoxConfig comboBoxConfig2({ "item4", "item5", "item6" });

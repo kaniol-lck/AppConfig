@@ -5,12 +5,13 @@
 #include "preferencenode.h"
 
 #include <QObject>
-#include <QTableView>
-#include <QStandardItemModel>
-#include <QFormLayout>
-#include <QSettings>
 
+class QFormLayout;
+class QSettings;
+class QStandardItemModel;
+class QTableView;
 class QTreeView;
+
 class PreferencesHelper : public QObject
 {
     Q_OBJECT

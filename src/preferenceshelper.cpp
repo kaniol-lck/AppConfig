@@ -1,18 +1,18 @@
 #include "preferenceshelper.h"
 
-#include <QCheckBox>
-#include <QComboBox>
-#include <QLineEdit>
-#include <QSettings>
+#include <QFormLayout>
 #include <QGroupBox>
-#include <QTreeView>
 #include <QHeaderView>
+#include <QSettings>
+#include <QStandardItemModel>
+#include <QTableView>
+#include <QTreeView>
 
 PreferencesHelper::PreferencesHelper(QObject *parent, QSettings *settings)
     : QObject{parent}
     , settings_(settings)
 {
-    if(!settings) settings = new QSettings(this);
+    if(!settings_) settings_ = new QSettings(this);
 }
 
 void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, bool showTitle)
@@ -40,10 +40,10 @@ void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, QStanda
             auto item = new QStandardItem(node->name_);
             if(node->checkable_){
                 item->setCheckable(true);
-                if(QSettings().value(key, node->defaultVal_).toBool())
+                if(settings_->value(key, node->defaultVal_).toBool())
                     item->setCheckState(Qt::Checked);
-                connect(this, &PreferencesHelper::applyed, this, [=]{
-                    QSettings().setValue(key, item->checkState() == Qt::Checked);
+                connect(this, &PreferencesHelper::applyed, this, [=, this]{
+                    settings_->setValue(key, item->checkState() == Qt::Checked);
                 });
             }
             item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -59,10 +59,10 @@ void PreferencesHelper::makeView(PreferenceNode *node, QTableView *view, QStanda
         model->appendRow({ item1, item2 });
 
         auto index = model->indexFromItem(item2);
-        auto [widget, valueGetter] = node->widgetConfig_->configWidget(view, QSettings().value(key));
+        auto [widget, valueGetter] = node->widgetConfig_->configWidget(view, settings_->value(key));
         view->setIndexWidget(index, widget);
-        connect(this, &PreferencesHelper::applyed, this, [=]{
-            QSettings().setValue(key, valueGetter());
+        connect(this, &PreferencesHelper::applyed, this, [=, this]{
+            settings_->setValue(key, valueGetter());
         });
     }
 }
@@ -93,10 +93,10 @@ void PreferencesHelper::makeTreeView(PreferenceNode *node, QTreeView *view, QSta
             auto item = new QStandardItem(node->name_);
             if(node->checkable_){
                 item->setCheckable(true);
-                if(QSettings().value(key, node->defaultVal_).toBool())
+                if(settings_->value(key, node->defaultVal_).toBool())
                     item->setCheckState(Qt::Checked);
-                connect(this, &PreferencesHelper::applyed, this, [=]{
-                    QSettings().setValue(key, item->checkState() == Qt::Checked);
+                connect(this, &PreferencesHelper::applyed, this, [=, this]{
+                    settings_->setValue(key, item->checkState() == Qt::Checked);
                 });
             }
             item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
@@ -116,10 +116,10 @@ void PreferencesHelper::makeTreeView(PreferenceNode *node, QTreeView *view, QSta
         model->itemFromIndex(index)->appendRow({ item1, item2 });
 
         auto index = model->indexFromItem(item2);
-        auto [widget, valueGetter] = node->widgetConfig_->configWidget(view, QSettings().value(key));
+        auto [widget, valueGetter] = node->widgetConfig_->configWidget(view, settings_->value(key));
         view->setIndexWidget(index, widget);
-        connect(this, &PreferencesHelper::applyed, this, [=]{
-            QSettings().setValue(key, valueGetter());
+        connect(this, &PreferencesHelper::applyed, this, [=, this]{
+            settings_->setValue(key, valueGetter());
         });
     }
 }
@@ -144,9 +144,9 @@ void PreferencesHelper::makeLayout(PreferenceNode *node, QWidget *parentWidget, 
             auto groupBox = new QGroupBox(text, parentWidget);
             if(node->checkable_){
                 groupBox->setCheckable(true);
-                groupBox->setChecked(QSettings().value(key, node->defaultVal_).toBool());
-                connect(this, &PreferencesHelper::applyed, this, [=]{
-                    QSettings().setValue(key, groupBox->isChecked());
+                groupBox->setChecked(settings_->value(key, node->defaultVal_).toBool());
+                connect(this, &PreferencesHelper::applyed, this, [=, this]{
+                    settings_->setValue(key, groupBox->isChecked());
                 });
             }
 
@@ -168,10 +168,10 @@ void PreferencesHelper::makeLayout(PreferenceNode *node, QWidget *parentWidget, 
     } else{
         auto text = node->name_;
 
-        auto [widget, valueGetter] = node->widgetConfig_->configWidget(parentWidget, QSettings().value(key));
+        auto [widget, valueGetter] = node->widgetConfig_->configWidget(parentWidget, settings_->value(key));
         layout->addRow(text, widget);
-        connect(this, &PreferencesHelper::applyed, this, [=]{
-            QSettings().setValue(key, valueGetter());
+        connect(this, &PreferencesHelper::applyed, this, [=, this]{
+            settings_->setValue(key, valueGetter());
         });
     }
 }
@@ -183,5 +183,6 @@ void PreferencesHelper::applyChanges()
 
 void PreferencesHelper::setSettings(QSettings *newSettings)
 {
+    if(settings_) settings_->deleteLater();
     settings_ = newSettings;
 }
