@@ -153,7 +153,7 @@ void PreferencesHelper::makeLayout(PreferenceNode *node, QWidget *parentWidget, 
                 });
             }
 
-            layout->addWidget(groupBox);
+            layout->setWidget(layout->rowCount(), QFormLayout::SpanningRole, groupBox);
             layout = new QFormLayout(groupBox);
             groupBox->setLayout(layout);
             for(auto subNode : node->list_)
