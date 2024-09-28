@@ -13,7 +13,8 @@ SOURCES += \
     prhp.cpp
 
 HEADERS += \
-    prhp.h
+    prhp.h \
+    MyConfig.hpp
 
 FORMS +=
 

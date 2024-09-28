@@ -20,6 +20,12 @@ private:
     std::function<void (QWidget*)> attrSetter_;
 };
 
+class EmptyConfig : public WidgetConfig
+{
+public:
+    std::tuple<QWidget*, std::function<QVariant()>> configWidget(QWidget *parentWidget, const QVariant &value) override;
+};
+
 class LineEditConfig : public WidgetConfig
 {
 public:
@@ -27,6 +33,12 @@ public:
 };
 
 class SpinBoxConfig : public WidgetConfig
+{
+public:
+    std::tuple<QWidget*, std::function<QVariant()>> configWidget(QWidget *parentWidget, const QVariant &value) override;
+};
+
+class DoubleSpinBoxConfig : public WidgetConfig
 {
 public:
     std::tuple<QWidget*, std::function<QVariant()>> configWidget(QWidget *parentWidget, const QVariant &value) override;

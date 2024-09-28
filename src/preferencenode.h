@@ -6,7 +6,9 @@
 
 class PreferenceNode
 {
+    friend class CommonNode;
     friend class PreferencesHelper;
+    friend class AppConfig;
 public:
     // root node
     PreferenceNode() = default;

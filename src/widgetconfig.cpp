@@ -20,10 +20,14 @@ void WidgetConfig::setAttr(const std::function<void (QWidget *)> &newAttrSetter)
     attrSetter_ = newAttrSetter;
 }
 
+std::tuple<QWidget *, std::function<QVariant ()> > EmptyConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+{
+    return {};
+}
+
 std::tuple<QWidget *, std::function<QVariant ()> > LineEditConfig::configWidget(QWidget *parentWidget, const QVariant &value)
 {
     auto line = new QLineEdit(parentWidget);
-    line->setFrame(false);
     auto text = value.toString();
     line->setText(text);
     applyAttr(line);
@@ -35,7 +39,6 @@ std::tuple<QWidget *, std::function<QVariant ()> > LineEditConfig::configWidget(
 std::tuple<QWidget *, std::function<QVariant ()> > SpinBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
 {
     auto spinBox = new QSpinBox(parentWidget);
-    spinBox->setFrame(false);
     auto val = value.toInt();
     spinBox->setValue(val);
     applyAttr(spinBox);
@@ -44,6 +47,16 @@ std::tuple<QWidget *, std::function<QVariant ()> > SpinBoxConfig::configWidget(Q
             }};
 }
 
+std::tuple<QWidget *, std::function<QVariant ()> > DoubleSpinBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+{
+    auto spinBox = new QDoubleSpinBox(parentWidget);
+    auto val = value.toInt();
+    spinBox->setValue(val);
+    applyAttr(spinBox);
+    return { spinBox, [spinBox]{
+                return spinBox->value();
+            }};
+}
 
 std::tuple<QWidget *, std::function<QVariant ()> > CheckBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
 {
