@@ -1,6 +1,6 @@
 #include "appconfig.h"
 
-QWidget *CommonNode::makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle)
+QWidget *CommonNode::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
     //title - group
     auto text = name_.isEmpty()? key_ : name_;
@@ -14,7 +14,7 @@ QWidget *CommonNode::makeLayout(QWidget *parentWidget, QFormLayout *layout, bool
     layout = new QFormLayout(groupBox);
     groupBox->setLayout(layout);
     for(auto &&subNode : list_)
-        subNode->makeLayout(groupBox, layout, true);
+        subNode->makeLayout(handler, groupBox, layout, true);
     return groupBox;
 }
 
@@ -26,11 +26,18 @@ void CommonNode::addNode(CommonNode *child){
     list_ << child;
 }
 
-void CommonNode::makeLayout(QWidget *widget, bool showTitle)
+ApplyHandler *CommonNode::makeLayout(ApplyHandler *handler, QWidget *widget, bool showTitle)
 {
     auto layout = new QFormLayout(widget);
     widget->setLayout(layout);
-    makeLayout(widget, layout, showTitle);
+    makeLayout(handler, widget, layout, showTitle);
+    return handler;
+}
+
+ApplyHandler *CommonNode::makeLayout(QWidget *widget, bool showTitle)
+{
+    auto handler = new ApplyHandler(appConfig_);
+    return makeLayout(handler, widget, showTitle);
 }
 
 QString CommonNode::key() const
@@ -120,14 +127,14 @@ ConfigListener *CheckableConfigGroup::checkListener()
     return l;
 }
 
-QWidget *CheckableConfigGroup::makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle)
+QWidget *CheckableConfigGroup::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
-    auto widget = ConfigGroup::makeLayout(parentWidget, layout, showTitle);
+    auto widget = ConfigGroup::makeLayout(handler, parentWidget, layout, showTitle);
     if(showTitle){
         auto groupBox = qobject_cast<QGroupBox*>(widget);
         groupBox->setCheckable(true);
         groupBox->setChecked(get());
-        QObject::connect(appConfig_, &AppConfig::applyed, [=, this]{
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = groupBox->isChecked();
                 value != appConfig_->settings()->value(key_, defaultEnable_)){
                 appConfig_->settings()->setValue(key_, value);

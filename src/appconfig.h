@@ -46,13 +46,25 @@ ConfigItem<Type> CONCAT(group, config) = \
 
 class AppConfig;
 
+// Empty tool class
+class ApplyHandler : public QObject
+{
+    Q_OBJECT
+public:
+    ApplyHandler(QObject *parent):
+        QObject(parent){}
+signals:
+    void applyed();
+};
+
 class CommonNode
 {
 public:
     CommonNode(AppConfig *appConfig);
 
     void addNode(CommonNode* child);
-    void makeLayout(QWidget *widget, bool showTitle = false);
+    ApplyHandler *makeLayout(QWidget *widget, bool showTitle = false);
+    ApplyHandler *makeLayout(ApplyHandler *handler, QWidget *widget, bool showTitle = false);
 
     QString key() const;
 
@@ -65,7 +77,7 @@ protected:
     QList<CommonNode*> list_;
     AppConfig *appConfig_;
 protected:
-    virtual QWidget *makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
+    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
 };
 
 class AppConfig : public QObject, public CommonNode
@@ -76,7 +88,6 @@ public:
     QSettings *settings();
 
 signals:
-    void applyed();
     void configChanged(const QString &key);
 
 private:
@@ -126,7 +137,7 @@ public:
 
 protected:
     bool defaultEnable_;
-    virtual QWidget *makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
+    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
 };
 
 template<typename T>
@@ -209,7 +220,7 @@ private:
     constexpr static bool isEmpty = std::is_same_v<DefaultConfigWidgetType, EmptyConfig>;
 
 protected:
-    QWidget *makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle[[maybe_unused]]) override
+    QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle[[maybe_unused]]) override
     {
         auto text = name_.isEmpty()? key_ : name_;
 
@@ -230,7 +241,7 @@ protected:
         }
 
         layout->addRow(text, widget);
-        QObject::connect(appConfig_, &AppConfig::applyed, [=, this]{
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = valueGetter();
                 value != settings_->value(key_, defaultVal_)){
                 settings_->setValue(key_, value);

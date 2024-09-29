@@ -42,8 +42,8 @@ PrHp::PrHp(QWidget *parent)
     // Group Box Style
     {
         auto widget = new QWidget;
-        config->makeLayout(widget);
-        connect(addWidgetTab(scrolled(widget), "Group Box Style"), &QPushButton::clicked, config, &MyConfig::applyed);
+        auto handler = config->makeLayout(widget);
+        connect(addWidgetTab(scrolled(widget), "Group Box Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
     }
 
     // Combined Style
@@ -68,10 +68,10 @@ PrHp::PrHp(QWidget *parent)
         stackWidget->addWidget(scrolled(widget3));
         connect(view, &QListWidget::currentRowChanged, stackWidget, &QStackedWidget::setCurrentIndex);
 
-        config->common.makeLayout(widget1);
-        config->download.makeLayout(widget2);
-        config->account.makeLayout(widget3);
-        connect(addWidgetTab(combined, "Combined Style"), &QPushButton::clicked, config, &MyConfig::applyed);
+        auto handler = config->common.makeLayout(widget1);
+        config->download.makeLayout(handler, widget2);
+        config->account.makeLayout(handler, widget3);
+        connect(addWidgetTab(combined, "Combined Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
     }
 }
 
