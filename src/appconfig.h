@@ -287,7 +287,7 @@ protected:
         });
         return item2;
     };
-    virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false)
+    virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle[[maybe_unused]]) override
     {
         auto text = name_.isEmpty()? key_ : name_;
 
