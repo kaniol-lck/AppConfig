@@ -3,7 +3,8 @@
 
 #include <QMainWindow>
 
-class PreferencesHelper;
+class QPushButton;
+class QScrollArea;
 
 class PrHp : public QMainWindow
 {
@@ -14,9 +15,9 @@ public:
     ~PrHp() = default;
 
 private:
-    PreferencesHelper *helper1_;
-    PreferencesHelper *helper2_;
-    PreferencesHelper *helper3_;
-    PreferencesHelper *helper4_;
+    QTabWidget *tabWidget_;
+
+    QScrollArea *scrolled(QWidget *widget);
+    QPushButton *addWidgetTab(QWidget *widget, const QString &name);
 };
 #endif // PRHP_H

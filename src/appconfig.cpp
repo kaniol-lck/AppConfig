@@ -68,8 +68,11 @@ ConfigGroup::ConfigGroup(AppConfig *appConfig, const QString &prefix, ConfigGrou
     CommonNode(appConfig){
     if(parentGroup){
         parentGroup->addNode(this);
-#ifdef ALLOW_CONFIG_GROUP_EMBED
-        key_ = parentGroup->key_ + "/" + prefix;
+#ifdef Q_OS_WIN
+        if(appConfig_->settings()->format() == QSettings::NativeFormat)
+            key_ = parentGroup->key_ + "/" + prefix;
+        else
+            key_ = parentGroup->key_ + "_" + prefix;
 #else
         key_ = parentGroup->key_ + "_" + prefix;
 #endif
@@ -78,6 +81,13 @@ ConfigGroup::ConfigGroup(AppConfig *appConfig, const QString &prefix, ConfigGrou
         appConfig->addNode(this);
         key_ = prefix;
     }
+}
+
+ConfigListener *ConfigGroup::listener()
+{
+    auto l = new ConfigListener(appConfig_);
+    l->listenConfigGroup(*this);
+    return l;
 }
 
 
@@ -103,6 +113,13 @@ bool CheckableConfigGroup::defaultVal() const
     return defaultEnable_;
 }
 
+ConfigListener *CheckableConfigGroup::checkListener()
+{
+    auto l = new ConfigListener(appConfig_);
+    l->listenConfigItem(*this);
+    return l;
+}
+
 QWidget *CheckableConfigGroup::makeLayout(QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
     auto widget = ConfigGroup::makeLayout(parentWidget, layout, showTitle);
@@ -119,5 +136,34 @@ QWidget *CheckableConfigGroup::makeLayout(QWidget *parentWidget, QFormLayout *la
         });
     }
     return widget;
+}
+
+
+ConfigListener::ConfigListener(AppConfig *appConfig)
+{
+    connect(appConfig, &AppConfig::configChanged, this, &ConfigListener::processListen);
+}
+
+void ConfigListener::listenConfigGroup(const ConfigGroup &group)
+{
+    listenedGroupKeys_ << group.key();
+}
+
+void ConfigListener::listenConfigItem(const CommonNode &item)
+{
+    listenedItemKeys_ << item.key();
+}
+void ConfigListener::processListen(const QString &key)
+{
+    if(listenedItemKeys_.contains(key)){
+        emit configChanged();
+        return;
+    }
+    for(auto &&groupKey :listenedGroupKeys_){
+        if(key.startsWith(groupKey)){
+            emit configChanged();
+            return;
+        }
+    }
 }
 

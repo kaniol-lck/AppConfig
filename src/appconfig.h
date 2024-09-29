@@ -83,11 +83,32 @@ private:
     QSettings *settings_;
 };
 
+class ConfigGroup;
+class ConfigListener : public QObject
+{
+    Q_OBJECT
+public:
+    ConfigListener(AppConfig *appConfig);
+
+    void listenConfigGroup(const ConfigGroup &group);
+    void listenConfigItem(const CommonNode &item);
+
+signals:
+    void configChanged();
+
+private:
+    QStringList listenedItemKeys_;
+    QStringList listenedGroupKeys_;
+
+    void processListen(const QString &key);
+};
+
 class ConfigGroup : public CommonNode
 {
 public:
     ConfigGroup(AppConfig *appConfig, const QString &prefix, ConfigGroup *parentGroup = nullptr);
 
+    ConfigListener *listener();
 private:
 };
 
@@ -100,6 +121,8 @@ public:
     void set(bool val);
     bool get() const;
     bool defaultVal() const;
+
+    ConfigListener *checkListener();
 
 protected:
     bool defaultEnable_;
@@ -146,6 +169,13 @@ public:
             appConfig->addNode(this);
             key_ = key;
         }
+    }
+
+    ConfigListener *listener()
+    {
+        auto l = new ConfigListener(appConfig_);
+        l->listenConfigItem(*this);
+        return l;
     }
 
     void reset(){
@@ -210,7 +240,6 @@ protected:
         return widget;
     }
 };
-
 
 
 #endif // APPCONFIG_H

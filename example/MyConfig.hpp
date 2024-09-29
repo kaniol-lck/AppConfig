@@ -8,9 +8,6 @@
 #include <QToolButton>
 
 #include <qglobal.h>
-#ifdef Q_OS_WIN
-#define ALLOW_CONFIG_GROUP_EMBED
-#endif
 
 // just a example to show how to customize default widget for configuring a certain type,
 // ofc you should store QColor in string lol <3
@@ -28,10 +25,13 @@ public:
         colorEditer->setIcon(QIcon(pixmap));
         colorEditer->setText(QObject::tr("Select Color"));
         QObject::connect(colorEditer, &QToolButton::clicked, [=]{
-            *color = QColorDialog::getColor(*color, colorEditer);
-            QPixmap pixmap(64, 64);
-            pixmap.fill(*color);
-            colorEditer->setIcon(QIcon(pixmap));
+            if(auto color2 = QColorDialog::getColor(*color, colorEditer);
+                color2.isValid()) {
+                *color = color2;
+                QPixmap pixmap(64, 64);
+                pixmap.fill(*color);
+                colorEditer->setIcon(QIcon(pixmap));
+            }
         });
         applyAttr(colorEditer);
         return { colorEditer, [color]{
@@ -51,6 +51,7 @@ public:
     MyConfig(QObject *parent) :
         AppConfig(parent){
 
+        // Setup display names
         exampleConfig.setName(tr("Example Config"));
 
         common.setName(tr("Common Settings"));
@@ -59,9 +60,14 @@ public:
         download.setName(tr("Download Settings"));
         // ...
 
-        QStringList items = { "item1", "item2", "item3" };
-        auto widgetConfig = std::make_shared<ComboBoxConfig>(items);
-        common_set2.setWidgetConfig(widgetConfig);
+        // Setup widget config
+        auto comboBoxConfig = std::make_shared<ComboBoxConfig>(
+            QStringList{ "item1", "item2", "item3" });
+        common_set2.setWidgetConfig(comboBoxConfig);
+
+        auto filePathConfig = std::make_shared<FilePathConfig>();
+        common_ui_path1.setWidgetConfig(filePathConfig);
+        common_ui_path2.setWidgetConfig(filePathConfig);
     }
 
     ADD_CONFIG(QString, exampleConfig, "default Value");
@@ -77,6 +83,8 @@ public:
     ADD_CONFIG(int, set3, 42, common_ui);
     ADD_CONFIG(double, set4, 66, common_ui);
     ADD_CONFIG(QStringList, set5, {}, common_ui);
+    ADD_CONFIG(QString, path1, "", common_ui);
+    ADD_CONFIG(QString, path2, "", common_ui);
 
     ADD_CHECKABLE_GROUP(toolBar, true, common_ui);
     ADD_CONFIG(bool, toolBar1, false, common_ui_toolBar);
@@ -86,6 +94,11 @@ public:
     ADD_CONFIG(QString, set1, "", download);
     ADD_CONFIG(QString, set2, "", download);
     ADD_CONFIG(bool, set3, false, download);
+
+    ADD_GROUP(account)
+    ADD_CONFIG(QString, set1, "", account);
+    ADD_CONFIG(QColor, set2, "yellow", account);
+    ADD_CONFIG(bool, set3, false, account);
 };
 
 #endif // MYCONFIG_HPP
