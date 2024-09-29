@@ -1,5 +1,3 @@
-#include "preferencenode.h"
-#include "preferenceshelper.h"
 #include "prhp.h"
 #include "MyConfig.hpp"
 
@@ -44,6 +42,20 @@ PrHp::PrHp(QWidget *parent)
         auto widget = new QWidget;
         auto handler = config->makeLayout(widget);
         connect(addWidgetTab(scrolled(widget), "Group Box Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+    }
+
+    // Table View Style
+    {
+        auto view = new QTableView;
+        auto handler = config->makeTableView(view);
+        connect(addWidgetTab(view, "QTable View Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+    }
+
+    // Tree View Style
+    {
+        auto view = new QTreeView;
+        auto handler = config->makeTreeView(view);
+        connect(addWidgetTab(view, "QTree View Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
     }
 
     // Combined Style

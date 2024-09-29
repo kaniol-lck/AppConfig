@@ -66,6 +66,12 @@ public:
     ApplyHandler *makeLayout(QWidget *widget, bool showTitle = false);
     ApplyHandler *makeLayout(ApplyHandler *handler, QWidget *widget, bool showTitle = false);
 
+    ApplyHandler *makeTableView(QTableView *view, bool showTitle = false);
+    ApplyHandler *makeTableView(ApplyHandler *handler, QTableView *view, bool showTitle = false);
+
+    ApplyHandler *makeTreeView(QTreeView *view, bool showTitle = false);
+    ApplyHandler *makeTreeView(ApplyHandler *handler, QTreeView *view, bool showTitle = false);
+
     QString key() const;
 
     QString name() const;
@@ -77,7 +83,9 @@ protected:
     QList<CommonNode*> list_;
     AppConfig *appConfig_;
 protected:
-    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
+    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);
+    virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false);
+    virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false);
 };
 
 class AppConfig : public QObject, public CommonNode
@@ -137,7 +145,9 @@ public:
 
 protected:
     bool defaultEnable_;
-    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);;
+    virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle) override;
+    virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false) override;
+    virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false) override;
 };
 
 template<typename T>
@@ -249,6 +259,63 @@ protected:
             }
         });
         return widget;
+    }
+    QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle[[maybe_unused]]) override
+    {
+        auto text = name_.isEmpty()? key_ : name_;
+
+        auto item1 = new QStandardItem(text);
+        auto item2 = new QStandardItem();
+        model->appendRow({ item1, item2 });
+
+        auto index = model->indexFromItem(item2);
+        QWidget *widget;
+        std::function<QVariant ()> valueGetter;
+        if(widgetConfig_){
+            std::tie(widget, valueGetter) = widgetConfig_->configWidget(view, settings_->value(key_, defaultVal_));
+        } else{
+            DefaultConfigWidgetType widgetConfig;
+            std::tie(widget, valueGetter) = widgetConfig.configWidget(view, settings_->value(key_, defaultVal_));
+        }
+        view->setIndexWidget(index, widget);
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
+            if(auto value = valueGetter();
+                value != settings_->value(key_, defaultVal_)){
+                settings_->setValue(key_, value);
+                emit appConfig_->configChanged(key_);
+            }
+        });
+        return item2;
+    };
+    virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false)
+    {
+        auto text = name_.isEmpty()? key_ : name_;
+
+        auto item1 = new QStandardItem(text);
+        auto item2 = new QStandardItem();
+        if(parent.isValid())
+            model->itemFromIndex(parent)->appendRow({ item1, item2 });
+        else
+            model->appendRow({ item1, item2 });
+
+        auto index = model->indexFromItem(item2);
+        QWidget *widget;
+        std::function<QVariant ()> valueGetter;
+        if(widgetConfig_){
+            std::tie(widget, valueGetter) = widgetConfig_->configWidget(view, settings_->value(key_, defaultVal_));
+        } else{
+            DefaultConfigWidgetType widgetConfig;
+            std::tie(widget, valueGetter) = widgetConfig.configWidget(view, settings_->value(key_, defaultVal_));
+        }
+        view->setIndexWidget(index, widget);
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
+            if(auto value = valueGetter();
+                value != settings_->value(key_, defaultVal_)){
+                settings_->setValue(key_, value);
+                emit appConfig_->configChanged(key_);
+            }
+        });
+        return item2;
     }
 };
 
