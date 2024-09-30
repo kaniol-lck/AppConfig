@@ -77,6 +77,8 @@ public:
     QString name() const;
     void setName(const QString &newName);
 
+    QString displayName() const;
+
 protected:
     QString name_;
     QString key_;
@@ -175,6 +177,11 @@ struct defaultConfigWidget<double>{
     using Type = DoubleSpinBoxConfig;
 };
 
+template<>
+struct defaultConfigWidget<QStringList>{
+    using Type = StringListConfig;
+};
+
 template<typename T>
 class ConfigItem : public CommonNode
 {
@@ -182,8 +189,8 @@ public:
     ConfigItem(AppConfig *appConfig, const QString &key, const T &defaultVal, ConfigGroup* parentGroup = nullptr):
         CommonNode(appConfig),
         defaultVal_(defaultVal),
-        settings_(appConfig->settings())
-    {    if(parentGroup){
+        settings_(appConfig->settings()){
+        if(parentGroup){
             parentGroup->addNode(this);
             key_ = parentGroup->key() + "/" + key;
         } else{
@@ -192,8 +199,7 @@ public:
         }
     }
 
-    ConfigListener *listener()
-    {
+    ConfigListener *listener(){
         auto l = new ConfigListener(appConfig_);
         l->listenConfigItem(*this);
         return l;
@@ -211,29 +217,50 @@ public:
         return settings_->value(key_, defaultVal_).template value<T>();
     }
 
-    T defaultVal() const
-    {
+    T defaultVal() const{
         return defaultVal_;
     }
 
-    void setWidgetConfig(std::shared_ptr<WidgetConfig> newWidgetConfig)
-    {
+    void setWidgetConfig(std::shared_ptr<WidgetConfig<T>> newWidgetConfig){
         widgetConfig_ = newWidgetConfig;
     }
+
 private:
     T defaultVal_;
     QSettings *settings_;
-    std::shared_ptr<WidgetConfig> widgetConfig_;
+    std::shared_ptr<WidgetConfig<T>> widgetConfig_;
 
 private:
     using DefaultConfigWidgetType = defaultConfigWidget<T>::Type;
     constexpr static bool isEmpty = std::is_same_v<DefaultConfigWidgetType, EmptyConfig>;
 
 protected:
+    void onConfigChanged()
+    {
+        qDebug() << "changed";
+    };
+
+    QWidget *applyWidgetConfig(ApplyHandler *handler, QWidget *parentWidget)
+    {
+        QWidget *widget;
+        std::function<T ()> valueGetter;
+        if(widgetConfig_){
+            std::tie(widget, valueGetter) = widgetConfig_->configWidget(parentWidget, get());
+        } else{
+            std::tie(widget, valueGetter) = DefaultConfigWidgetType().configWidget(parentWidget, get());
+        }
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
+            if(auto value = valueGetter();
+                value != get()){
+                set(value);
+                emit appConfig_->configChanged(key_);
+            }
+        });
+        return widget;
+    }
+
     QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle[[maybe_unused]]) override
     {
-        auto text = name_.isEmpty()? key_ : name_;
-
         if(isEmpty){
             auto label = new QLabel(QString("WARNING: %1 has no default widget to config")
                                         .arg(key_), parentWidget);
@@ -241,57 +268,24 @@ protected:
             layout->setWidget(layout->rowCount(), QFormLayout::SpanningRole, label);
             return label;
         }
-        QWidget *widget;
-        std::function<QVariant ()> valueGetter;
-        if(widgetConfig_){
-            std::tie(widget, valueGetter) = widgetConfig_->configWidget(parentWidget, settings_->value(key_, defaultVal_));
-        } else{
-            DefaultConfigWidgetType widgetConfig;
-            std::tie(widget, valueGetter) = widgetConfig.configWidget(parentWidget, settings_->value(key_, defaultVal_));
-        }
-
-        layout->addRow(text, widget);
-        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
-            if(auto value = valueGetter();
-                value != settings_->value(key_, defaultVal_)){
-                settings_->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
-            }
-        });
+        auto widget = applyWidgetConfig(handler, parentWidget);
+        layout->addRow(displayName(), widget);
         return widget;
     }
     QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle[[maybe_unused]]) override
     {
-        auto text = name_.isEmpty()? key_ : name_;
-
-        auto item1 = new QStandardItem(text);
+        auto item1 = new QStandardItem(displayName());
         auto item2 = new QStandardItem();
         model->appendRow({ item1, item2 });
 
         auto index = model->indexFromItem(item2);
-        QWidget *widget;
-        std::function<QVariant ()> valueGetter;
-        if(widgetConfig_){
-            std::tie(widget, valueGetter) = widgetConfig_->configWidget(view, settings_->value(key_, defaultVal_));
-        } else{
-            DefaultConfigWidgetType widgetConfig;
-            std::tie(widget, valueGetter) = widgetConfig.configWidget(view, settings_->value(key_, defaultVal_));
-        }
+        auto widget = applyWidgetConfig(handler, view);
         view->setIndexWidget(index, widget);
-        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
-            if(auto value = valueGetter();
-                value != settings_->value(key_, defaultVal_)){
-                settings_->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
-            }
-        });
         return item2;
     };
     virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle[[maybe_unused]]) override
     {
-        auto text = name_.isEmpty()? key_ : name_;
-
-        auto item1 = new QStandardItem(text);
+        auto item1 = new QStandardItem(displayName());
         auto item2 = new QStandardItem();
         if(parent.isValid())
             model->itemFromIndex(parent)->appendRow({ item1, item2 });
@@ -299,22 +293,8 @@ protected:
             model->appendRow({ item1, item2 });
 
         auto index = model->indexFromItem(item2);
-        QWidget *widget;
-        std::function<QVariant ()> valueGetter;
-        if(widgetConfig_){
-            std::tie(widget, valueGetter) = widgetConfig_->configWidget(view, settings_->value(key_, defaultVal_));
-        } else{
-            DefaultConfigWidgetType widgetConfig;
-            std::tie(widget, valueGetter) = widgetConfig.configWidget(view, settings_->value(key_, defaultVal_));
-        }
+        auto widget = applyWidgetConfig(handler, view);
         view->setIndexWidget(index, widget);
-        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
-            if(auto value = valueGetter();
-                value != settings_->value(key_, defaultVal_)){
-                settings_->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
-            }
-        });
         return item2;
     }
 };

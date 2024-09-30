@@ -11,12 +11,12 @@
 
 // just a example to show how to customize default widget for configuring a certain type,
 // ofc you should store QColor in string lol <3
-class ColorConfig : public WidgetConfig
+class ColorConfig : public WidgetConfig<QColor>
 {
 public:
-    std::tuple<QWidget*, std::function<QVariant()>> configWidget(QWidget *parentWidget, const QVariant &value) override
+    std::tuple<QWidget*, std::function<QColor()>> configWidget(QWidget *parentWidget, const QColor &value) override
     {
-        auto color = std::make_shared<QColor>(value.value<QColor>());
+        auto color = std::make_shared<QColor>(value);
 
         auto colorEditer = new QToolButton(parentWidget);
         colorEditer->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -82,7 +82,7 @@ public:
     ADD_CONFIG(QString, set2, "", common_ui);
     ADD_CONFIG(int, set3, 42, common_ui);
     ADD_CONFIG(double, set4, 66, common_ui);
-    ADD_CONFIG(QStringList, set5, {}, common_ui);
+    ADD_CONFIG(QStringList, set5, (QStringList{ "123", "456" }), common_ui);
     ADD_CONFIG(QString, path1, "", common_ui);
     ADD_CONFIG(QString, path2, "", common_ui);
 

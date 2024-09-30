@@ -133,6 +133,11 @@ void CommonNode::setName(const QString &newName)
     name_ = newName;
 }
 
+QString CommonNode::displayName() const
+{
+    return name_.isEmpty()? key_ : name_;
+}
+
 
 AppConfig::AppConfig(QObject *parent, QSettings *settings) :
     QObject(parent),

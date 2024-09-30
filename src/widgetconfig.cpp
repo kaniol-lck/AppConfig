@@ -7,61 +7,51 @@
 #include <QToolButton>
 #include <QFileDialog>
 #include <QSpinBox>
+#include <QListView>
+#include <QStandardItemModel>
+#include <QListWidget>
+#include <QMenu>
 
-WidgetConfig::WidgetConfig() {}
-
-void WidgetConfig::applyAttr(QWidget *widget)
-{
-    if(attrSetter_) attrSetter_(widget);
-}
-
-void WidgetConfig::setAttr(const std::function<void (QWidget *)> &newAttrSetter)
-{
-    attrSetter_ = newAttrSetter;
-}
 
 std::tuple<QWidget *, std::function<QVariant ()> > EmptyConfig::configWidget(QWidget *parentWidget, const QVariant &value)
 {
     return {};
 }
 
-std::tuple<QWidget *, std::function<QVariant ()> > LineEditConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<QString ()> > LineEditConfig::configWidget(QWidget *parentWidget, const QString &value)
 {
     auto line = new QLineEdit(parentWidget);
-    auto text = value.toString();
-    line->setText(text);
+    line->setText(value);
     applyAttr(line);
     return { line, [line]{
                 return line->text();
             }};
 }
 
-std::tuple<QWidget *, std::function<QVariant ()> > SpinBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<int ()> > SpinBoxConfig::configWidget(QWidget *parentWidget, const int &value)
 {
     auto spinBox = new QSpinBox(parentWidget);
-    auto val = value.toInt();
-    spinBox->setValue(val);
+    spinBox->setValue(value);
     applyAttr(spinBox);
     return { spinBox, [spinBox]{
                 return spinBox->value();
             }};
 }
 
-std::tuple<QWidget *, std::function<QVariant ()> > DoubleSpinBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<double ()> > DoubleSpinBoxConfig::configWidget(QWidget *parentWidget, const double &value)
 {
     auto spinBox = new QDoubleSpinBox(parentWidget);
-    auto val = value.toInt();
-    spinBox->setValue(val);
+    spinBox->setValue(value);
     applyAttr(spinBox);
     return { spinBox, [spinBox]{
                 return spinBox->value();
             }};
 }
 
-std::tuple<QWidget *, std::function<QVariant ()> > CheckBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<bool ()> > CheckBoxConfig::configWidget(QWidget *parentWidget, const bool &value)
 {
     auto checkBox = new QCheckBox(parentWidget);
-    checkBox->setChecked(value.toBool());
+    checkBox->setChecked(value);
     applyAttr(checkBox);
     return { checkBox, [checkBox]{
                 return checkBox->isChecked();
@@ -72,11 +62,11 @@ ComboBoxConfig::ComboBoxConfig(QStringList items) :
     items_(items)
 {}
 
-std::tuple<QWidget *, std::function<QVariant ()> > ComboBoxConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<int ()> > ComboBoxConfig::configWidget(QWidget *parentWidget, const int &value)
 {
     auto comboBox = new QComboBox(parentWidget);
     comboBox->addItems(items_);
-    comboBox->setCurrentIndex(value.toInt());
+    comboBox->setCurrentIndex(value);
     applyAttr(comboBox);
     return { comboBox, [comboBox]{
                 return comboBox->currentIndex();
@@ -88,7 +78,7 @@ FilePathConfig::FilePathConfig(const QString &caption, const QString &filter) :
     filter_(filter)
 {}
 
-std::tuple<QWidget *, std::function<QVariant ()> > FilePathConfig::configWidget(QWidget *parentWidget, const QVariant &value)
+std::tuple<QWidget *, std::function<QString ()> > FilePathConfig::configWidget(QWidget *parentWidget, const QString &value)
 {
     auto widget = new QWidget(parentWidget);
     auto layout = new QHBoxLayout(widget);
@@ -105,10 +95,42 @@ std::tuple<QWidget *, std::function<QVariant ()> > FilePathConfig::configWidget(
         line->setText(fileName);
     });
 
-    auto text = value.toString();
-    line->setText(text);
+    line->setText(value);
     applyAttr(widget);
     return { widget, [line]{
                 return line->text();
+            }};
+}
+
+std::tuple<QWidget *, std::function<QStringList ()> > StringListConfig::configWidget(QWidget *parentWidget, const QStringList &value)
+{
+    auto view = new QListView(parentWidget);
+    view->setEditTriggers(QAbstractItemView::DoubleClicked |
+                            QAbstractItemView::EditKeyPressed |
+                            QAbstractItemView::AnyKeyPressed);
+    auto model = new QStandardItemModel(view);
+    view->setModel(model);
+    for(auto &&str : value){
+        model->appendRow(new QStandardItem(str));
+    }
+    view->setContextMenuPolicy(Qt::CustomContextMenu);
+    QObject::connect(view, &QListWidget::customContextMenuRequested, parentWidget, [=](auto pos){
+        auto menu = new QMenu(view);
+        menu->addAction("Add", [view, model]{
+            model->appendRow(new QStandardItem);
+            view->edit(model->index(model->rowCount() - 1, 0));
+        });
+        if(auto index = view->indexAt(pos);
+            index.isValid())
+            menu->addAction("Remove", [model, index]{
+                model->removeRow(index.row());
+            });
+        menu->exec(view->mapToGlobal(pos));
+    });
+    return { view, [model]{
+                QStringList list;
+                for(auto row = 0; row < model->rowCount(); row++)
+                    list << model->item(row)->text();
+                return list;
             }};
 }
