@@ -290,4 +290,3 @@ void ConfigListener::processListen(const QString &key)
         }
     }
 }
-

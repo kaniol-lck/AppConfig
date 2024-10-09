@@ -11,38 +11,42 @@
 
 // just a example to show how to customize default widget for configuring a certain type,
 // ofc you should store QColor in string lol <3
-class ColorConfig : public WidgetConfig<QColor>
+class ColorWrapper : public WidgetWrapper<QToolButton, QColor>
 {
 public:
-    std::tuple<QWidget*, std::function<QColor()>> configWidget(QWidget *parentWidget, const QColor &value) override
+    void genWidget(QWidget *parentWidget) override
     {
-        auto color = std::make_shared<QColor>(value);
+        WidgetWrapper<QToolButton, QColor>::genWidget(parentWidget);
 
-        auto colorEditer = new QToolButton(parentWidget);
+        auto colorEditer = widgetT();
         colorEditer->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-        QPixmap pixmap(64, 64);
-        pixmap.fill(*color);
-        colorEditer->setIcon(QIcon(pixmap));
         colorEditer->setText(QObject::tr("Select Color"));
-        QObject::connect(colorEditer, &QToolButton::clicked, [=]{
-            if(auto color2 = QColorDialog::getColor(*color, colorEditer);
-                color2.isValid()) {
-                *color = color2;
-                QPixmap pixmap(64, 64);
-                pixmap.fill(*color);
-                colorEditer->setIcon(QIcon(pixmap));
+
+        QObject::connect(colorEditer, &QToolButton::clicked, [this]{
+            if(auto color = QColorDialog::getColor(get(), widgetT());
+                color.isValid()) {
+                set(color);
             }
         });
-        applyAttr(colorEditer);
-        return { colorEditer, [color]{
-                    return *color;
-                }};
     }
+    QColor get() override
+    {
+        return color_;
+    }
+    void set(const QColor &value) override
+    {
+        color_ = value;
+        QPixmap pixmap(64, 64);
+        pixmap.fill(color_);
+        widgetT()->setIcon(QIcon(pixmap));
+    }
+private:
+    QColor color_;
 };
 
 template<>
 struct defaultConfigWidget<QColor>{
-    using Type = ColorConfig;
+    using Type = ColorWrapper;
 };
 
 class MyConfig : public AppConfig
@@ -60,14 +64,11 @@ public:
         download.setName(tr("Download Settings"));
         // ...
 
-        // Setup widget config
-        auto comboBoxConfig = std::make_shared<ComboBoxConfig>(
-            QStringList{ "item1", "item2", "item3" });
-        common_set2.setWidgetConfig(comboBoxConfig);
+        common_set2.setGenerator<ComboBoxWrapperWidget>(QStringList{ "item1", "item2", "item3" });
 
-        auto filePathConfig = std::make_shared<FilePathConfig>();
-        common_ui_path1.setWidgetConfig(filePathConfig);
-        common_ui_path2.setWidgetConfig(filePathConfig);
+        auto filePath = WrapperGenerator<FilePathWrapper, QString>::makePtr("Select image files plz", "*.jpg;*.png");
+        common_ui_path1.setGeneratorPtr(filePath);
+        common_ui_path2.setGeneratorPtr(filePath);
     }
 
     ADD_CONFIG(QString, exampleConfig, "default Value");

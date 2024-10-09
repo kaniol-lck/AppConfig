@@ -7,11 +7,10 @@ CONFIG += c++20
 INCLUDEPATH+= $$PWD/src
 
 SOURCES += \
-    $$PWD/src/appconfig.cpp \
-    $$PWD/src/widgetconfig.cpp
+    $$PWD/src/appconfig.cpp
 
 HEADERS += \
     $$PWD/src/appconfig.h \
-    $$PWD/src/widgetconfig.h
+    $$PWD/src/configwrapperwidget.h
 
 FORMS +=

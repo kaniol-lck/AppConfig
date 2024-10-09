@@ -1,7 +1,7 @@
 #ifndef APPCONFIG_H
 #define APPCONFIG_H
 
-#include "widgetconfig.h"
+#include "configwrapperwidget.h"
 #include <QFormLayout>
 #include <QSettings>
 #include <QVariant>
@@ -154,33 +154,30 @@ protected:
 
 template<typename T>
 struct defaultConfigWidget{
-    using Type = EmptyConfig;
+    using Type = WidgetWrapper<QWidget, T>;
 };
 
 template<>
 struct defaultConfigWidget<QString>{
-    using Type = LineEditConfig;
+    using Type = LineEditWrapper;
 };
-
-template<>
-struct defaultConfigWidget<bool>{
-    using Type = CheckBoxConfig;
-};
-
 template<>
 struct defaultConfigWidget<int>{
-    using Type = SpinBoxConfig;
+    using Type = SpinBoxWrapper;
 };
-
 template<>
 struct defaultConfigWidget<double>{
-    using Type = DoubleSpinBoxConfig;
+    using Type = DoubleSpinBoxWrapper;
 };
-
+template<>
+struct defaultConfigWidget<bool>{
+    using Type = CheckBoxWrapper;
+};
 template<>
 struct defaultConfigWidget<QStringList>{
-    using Type = StringListConfig;
+    using Type = StringListWrapper;
 };
+
 
 template<typename T>
 class ConfigItem : public CommonNode
@@ -221,18 +218,25 @@ public:
         return defaultVal_;
     }
 
-    void setWidgetConfig(std::shared_ptr<WidgetConfig<T>> newWidgetConfig){
-        widgetConfig_ = newWidgetConfig;
+    template<typename WrapperT, typename... Args>
+    void setGenerator(Args&&... args)
+    {
+        generator_ = std::make_shared<WrapperGenerator<WrapperT, T>>(std::forward<Args>(args)...);
+    }
+
+    void setGeneratorPtr(const std::shared_ptr<Generator<T>> &newGenerator)
+    {
+        generator_ = newGenerator;
     }
 
 private:
     T defaultVal_;
     QSettings *settings_;
-    std::shared_ptr<WidgetConfig<T>> widgetConfig_;
+    std::shared_ptr<Generator<T>> generator_;
 
 private:
     using DefaultConfigWidgetType = defaultConfigWidget<T>::Type;
-    constexpr static bool isEmpty = std::is_same_v<DefaultConfigWidgetType, EmptyConfig>;
+    constexpr static bool isEmpty = std::is_same_v<DefaultConfigWidgetType, WidgetWrapper<QWidget, T>>;
 
 protected:
     void onConfigChanged()
@@ -242,21 +246,23 @@ protected:
 
     QWidget *applyWidgetConfig(ApplyHandler *handler, QWidget *parentWidget)
     {
-        QWidget *widget;
-        std::function<T ()> valueGetter;
-        if(widgetConfig_){
-            std::tie(widget, valueGetter) = widgetConfig_->configWidget(parentWidget, get());
-        } else{
-            std::tie(widget, valueGetter) = DefaultConfigWidgetType().configWidget(parentWidget, get());
-        }
+        std::shared_ptr<Wrapper<T>> wrapper;
+        if(!generator_)
+            wrapper = std::make_shared<DefaultConfigWidgetType>();
+        else
+            wrapper = generator_->genWrapper();
+        wrapper->genWidget(parentWidget);
+        if(generator_) generator_->applyAttrSetter(wrapper->widget());
+        wrapper->set(get());
+
         QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
-            if(auto value = valueGetter();
+            if(auto value = wrapper->get();
                 value != get()){
                 set(value);
                 emit appConfig_->configChanged(key_);
             }
         });
-        return widget;
+        return wrapper->widget();
     }
 
     QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle[[maybe_unused]]) override
