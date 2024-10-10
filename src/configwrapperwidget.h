@@ -149,10 +149,10 @@ public:
     }
 };
 
-class ComboBoxWrapperWidget : public WidgetWrapper<QComboBox, int>
+class ComboBoxWrapper : public WidgetWrapper<QComboBox, int>
 {
 public:
-    ComboBoxWrapperWidget(QStringList items):
+    ComboBoxWrapper(const QStringList &items):
         items_(items)
     {}
 

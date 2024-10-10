@@ -64,7 +64,7 @@ public:
         download.setName(tr("Download Settings"));
         // ...
 
-        common_set2.setGenerator<ComboBoxWrapperWidget>(QStringList{ "item1", "item2", "item3" });
+        common_set2.setGenerator<ComboBoxWrapper>(QStringList{ "item1", "item2", "item3" });
 
         auto filePath = WrapperGenerator<FilePathWrapper, QString>::makePtr("Select image files plz", "*.jpg;*.png");
         common_ui_path1.setGeneratorPtr(filePath);

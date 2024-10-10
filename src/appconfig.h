@@ -219,9 +219,11 @@ public:
     }
 
     template<typename WrapperT, typename... Args>
-    void setGenerator(Args&&... args)
+    auto setGenerator(Args&&... args)
     {
-        generator_ = std::make_shared<WrapperGenerator<WrapperT, T>>(std::forward<Args>(args)...);
+        auto generator = std::make_shared<WrapperGenerator<WrapperT, T>>(std::forward<Args>(args)...);
+        generator_ = generator;
+        return generator;
     }
 
     void setGeneratorPtr(const std::shared_ptr<Generator<T>> &newGenerator)
