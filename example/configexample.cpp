@@ -10,7 +10,6 @@
 #include <QVBoxLayout>
 #include <QSpinBox>
 
-
 ConfigExample::ConfigExample(QWidget *parent)
     : QMainWindow(parent)
     , tabWidget_(new QTabWidget(this))
@@ -37,6 +36,31 @@ ConfigExample::ConfigExample(QWidget *parent)
     });
 
     // UI generation example
+    {
+        class CustomConfig : public AppConfig
+        {
+        public:
+            CustomConfig(QObject *parent, std::shared_ptr<MapSetting> settings) :
+                AppConfig(parent, settings){
+            }
+
+            ADD_CONFIG(QString, attr1, "test1")
+            ADD_CONFIG(QString, attr2, "test2")
+            ADD_CONFIG(int, attr3, 42)
+            ADD_CONFIG(int, attr4, 43)
+        };
+        auto settings = std::make_shared<MapSetting>();
+        auto custom = new CustomConfig(this, settings);
+        auto widget = new QWidget;
+        auto handler = custom->makeLayout(widget);
+        connect(addWidgetTab(scrolled(widget), "Custom Settings"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+        connect(handler, &ApplyHandler::applyed, this, [=]{
+            qDebug() << settings->variantMap();
+        });
+
+    }
+
+
     // Group Box Style
     {
         auto widget = new QWidget;

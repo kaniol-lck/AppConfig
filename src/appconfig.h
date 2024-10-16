@@ -44,6 +44,56 @@ ConfigItem<Type> CONCAT(group, config) = \
     ConfigItem<Type>(this, #config, defaultVal, &group);
 #define ADD_CONFIG(...) OVERRIDE(__VA_ARGS__, ADD_CONFIG2, ADD_CONFIG1, _, _)(__VA_ARGS__)
 
+class VariantContainer
+{
+public:
+    virtual QVariant get(const QStringList &keys, const QVariant &defaultVal) = 0;
+    virtual void set(const QStringList &keys, const QVariant &value) = 0;
+};
+
+class Settings : public VariantContainer
+{
+public:
+    Settings(QSettings *settings) :
+        settings_(settings)
+    {}
+    virtual QVariant get(const QStringList &keys, const QVariant &defaultVal){
+        return settings_->value(key(keys), defaultVal);
+    }
+    virtual void set(const QStringList &keys, const QVariant &value){
+        settings_->setValue(key(keys), value);
+    }
+private:
+    QSettings *settings_;
+    static QString key(const QStringList& keys)
+    {
+#ifdef Q_OS_WIN
+        return keys.join('/');
+#else
+        return keys.join('_');
+#endif
+    }
+};
+
+class MapSetting : public VariantContainer
+{
+public:
+    virtual QVariant get(const QStringList &keys, const QVariant &defaultVal)override{
+        return map_.value(keys.join("/"), defaultVal);
+    }
+    virtual void set(const QStringList &keys, const QVariant &value){
+        map_.insert(keys.join("/"), value);
+    }
+
+    QVariantMap variantMap() const
+    {
+        return map_;
+    }
+
+private:
+    QVariantMap map_;
+};
+
 class AppConfig;
 
 // Empty tool class
@@ -57,10 +107,12 @@ signals:
     void applyed();
 };
 
+class ConfigGroup;
 class CommonNode
 {
 public:
     CommonNode(AppConfig *appConfig);
+    CommonNode(AppConfig *appConfig, const QString &key, ConfigGroup* parentGroup = nullptr);
 
     void addNode(CommonNode* child);
     ApplyHandler *makeLayout(QWidget *widget, bool showTitle = false);
@@ -73,6 +125,7 @@ public:
     ApplyHandler *makeTreeView(ApplyHandler *handler, QTreeView *view, bool showTitle = false);
 
     QString key() const;
+    QStringList keys() const;
 
     QString name() const;
     void setName(const QString &newName);
@@ -81,9 +134,10 @@ public:
 
 protected:
     QString name_;
-    QString key_;
+    QStringList keys_;
     QList<CommonNode*> list_;
     AppConfig *appConfig_;
+
 protected:
     virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);
     virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false);
@@ -95,13 +149,15 @@ class AppConfig : public QObject, public CommonNode
     Q_OBJECT
 public:
     AppConfig(QObject *parent = nullptr, QSettings *settings = nullptr);
-    QSettings *settings();
+    AppConfig(QObject *parent, std::shared_ptr<VariantContainer> settings);
+
+    std::shared_ptr<VariantContainer> &settings();
 
 signals:
     void configChanged(const QString &key);
 
 private:
-    QSettings *settings_;
+    std::shared_ptr<VariantContainer> settings_;
 };
 
 class ConfigGroup;
@@ -184,17 +240,9 @@ class ConfigItem : public CommonNode
 {
 public:
     ConfigItem(AppConfig *appConfig, const QString &key, const T &defaultVal, ConfigGroup* parentGroup = nullptr):
-        CommonNode(appConfig),
-        defaultVal_(defaultVal),
-        settings_(appConfig->settings()){
-        if(parentGroup){
-            parentGroup->addNode(this);
-            key_ = parentGroup->key() + "/" + key;
-        } else{
-            appConfig->addNode(this);
-            key_ = key;
-        }
-    }
+        CommonNode(appConfig, key, parentGroup),
+        defaultVal_(defaultVal)
+    {}
 
     ConfigListener *listener(){
         auto l = new ConfigListener(appConfig_);
@@ -203,15 +251,15 @@ public:
     }
 
     void reset(){
-        settings_->setValue(key_, defaultVal_);
+        appConfig_->settings()->set(keys_, defaultVal_);
     }
 
     void set(const T &val){
-        settings_->setValue(key_, val);
+        appConfig_->settings()->set(keys_, val);
     }
 
     T get() const{
-        return settings_->value(key_, defaultVal_).template value<T>();
+        return appConfig_->settings()->get(keys_, defaultVal_).template value<T>();
     }
 
     T defaultVal() const{
@@ -233,7 +281,6 @@ public:
 
 private:
     T defaultVal_;
-    QSettings *settings_;
     std::shared_ptr<Generator<T>> generator_;
 
 private:
@@ -261,7 +308,7 @@ protected:
             if(auto value = wrapper->get();
                 value != get()){
                 set(value);
-                emit appConfig_->configChanged(key_);
+                emit appConfig_->configChanged(key());
             }
         });
         return wrapper->widget();
@@ -271,11 +318,12 @@ protected:
     {
         if(isEmpty){
             auto label = new QLabel(QString("WARNING: %1 has no default widget to config")
-                                        .arg(key_), parentWidget);
+                                        .arg(key()), parentWidget);
             label->setStyleSheet("color: red;");
             layout->setWidget(layout->rowCount(), QFormLayout::SpanningRole, label);
             return label;
         }
+
         auto widget = applyWidgetConfig(handler, parentWidget);
         layout->addRow(displayName(), widget);
         return widget;

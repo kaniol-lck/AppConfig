@@ -3,7 +3,7 @@
 QWidget *CommonNode::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
     //title - group
-    auto text = name_.isEmpty()? key_ : name_;
+    auto text = name_.isEmpty()? key() : name_;
     QWidget *groupBox;
     if(showTitle)
         groupBox = new QGroupBox(text, parentWidget);
@@ -21,7 +21,7 @@ QWidget *CommonNode::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QF
 QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle)
 {
     //title - group
-    auto text = name_.isEmpty()? key_ : name_;
+    auto text = name_.isEmpty()? key() : name_;
     QStandardItem *item = nullptr;
     if(showTitle){
         item = new QStandardItem(text);
@@ -38,7 +38,7 @@ QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view
 QStandardItem *CommonNode::makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle)
 {
     //title - group
-    auto text = name_.isEmpty()? key_ : name_;
+    auto text = name_.isEmpty()? key() : name_;
     QStandardItem *item = nullptr;
     if(showTitle){
         item = new QStandardItem(text);
@@ -56,9 +56,21 @@ QStandardItem *CommonNode::makeTreeView(ApplyHandler *handler, QTreeView *view, 
     return item;
 }
 
-CommonNode::CommonNode(AppConfig *appConfig) :
+CommonNode::CommonNode(AppConfig *appConfig):
     appConfig_(appConfig)
 {}
+
+CommonNode::CommonNode(AppConfig *appConfig, const QString &key, ConfigGroup* parentGroup) :
+    appConfig_(appConfig)
+{
+    if(parentGroup){
+        parentGroup->addNode(this);
+        keys_ << parentGroup->keys() << key;
+    } else{
+        appConfig->addNode(this);
+        keys_ << key;
+    }
+}
 
 void CommonNode::addNode(CommonNode *child){
     list_ << child;
@@ -120,7 +132,16 @@ ApplyHandler *CommonNode::makeTreeView(ApplyHandler *handler, QTreeView *view, b
 
 QString CommonNode::key() const
 {
-    return key_;
+#ifdef Q_OS_WIN
+    return keys_.join('/');
+#else
+    return key_.join('_');
+#endif
+}
+
+QStringList CommonNode::keys() const
+{
+    return keys_;
 }
 
 QString CommonNode::name() const
@@ -135,43 +156,34 @@ void CommonNode::setName(const QString &newName)
 
 QString CommonNode::displayName() const
 {
-    return name_.isEmpty()? key_ : name_;
+    return name_.isEmpty()? key() : name_;
 }
 
 
 AppConfig::AppConfig(QObject *parent, QSettings *settings) :
     QObject(parent),
-    CommonNode(this),
-    settings_(settings)
+    CommonNode(this)
 {
-    if(!settings_)
-        settings_ = new QSettings(this);
+    if(!settings)
+        settings = new QSettings(this);
+    settings_ = std::make_shared<Settings>(settings);
 }
 
-QSettings *AppConfig::settings()
+AppConfig::AppConfig(QObject *parent, std::shared_ptr<VariantContainer> settings) :
+    QObject(parent),
+    CommonNode(this),
+    settings_(settings)
+{}
+
+std::shared_ptr<VariantContainer> &AppConfig::settings()
 {
     return settings_;
 }
 
 
 ConfigGroup::ConfigGroup(AppConfig *appConfig, const QString &prefix, ConfigGroup *parentGroup):
-    CommonNode(appConfig){
-    if(parentGroup){
-        parentGroup->addNode(this);
-#ifdef Q_OS_WIN
-        if(appConfig_->settings()->format() == QSettings::NativeFormat)
-            key_ = parentGroup->key_ + "/" + prefix;
-        else
-            key_ = parentGroup->key_ + "_" + prefix;
-#else
-        key_ = parentGroup->key_ + "_" + prefix;
-#endif
-
-    } else{
-        appConfig->addNode(this);
-        key_ = prefix;
-    }
-}
+    CommonNode(appConfig, prefix, parentGroup)
+{}
 
 ConfigListener *ConfigGroup::listener()
 {
@@ -187,15 +199,15 @@ CheckableConfigGroup::CheckableConfigGroup(AppConfig *appConfig, const QString &
 {}
 
 void CheckableConfigGroup::reset(){
-    appConfig_->settings()->setValue(key_, defaultEnable_);
+    appConfig_->settings()->set(keys_, defaultEnable_);
 }
 
 void CheckableConfigGroup::set(bool val){
-    appConfig_->settings()->setValue(key_, val);
+    appConfig_->settings()->set(keys_, val);
 }
 
 bool CheckableConfigGroup::get() const{
-    return appConfig_->settings()->value(key_, defaultEnable_).toBool();
+    return appConfig_->settings()->get(keys_, defaultEnable_).toBool();
 }
 
 bool CheckableConfigGroup::defaultVal() const
@@ -219,9 +231,9 @@ QWidget *CheckableConfigGroup::makeLayout(ApplyHandler *handler, QWidget *parent
         groupBox->setChecked(get());
         QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = groupBox->isChecked();
-                value != appConfig_->settings()->value(key_, defaultEnable_)){
-                appConfig_->settings()->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
+                value != appConfig_->settings()->get(keys_, defaultEnable_)){
+                appConfig_->settings()->set(keys_, value);
+                emit appConfig_->configChanged(key());
             }
         });
     }
@@ -236,9 +248,9 @@ QStandardItem *CheckableConfigGroup::makeTableView(ApplyHandler *handler, QTable
         item->setCheckState(get()? Qt::Checked : Qt::Unchecked);
         QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = item->checkState() == Qt::Checked;
-                value != appConfig_->settings()->value(key_, defaultEnable_)){
-                appConfig_->settings()->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
+                value != appConfig_->settings()->get(keys_, defaultEnable_)){
+                appConfig_->settings()->set(keys_, value);
+                emit appConfig_->configChanged(key());
             }
         });
     }
@@ -253,9 +265,9 @@ QStandardItem *CheckableConfigGroup::makeTreeView(ApplyHandler *handler, QTreeVi
         item->setCheckState(get()? Qt::Checked : Qt::Unchecked);
         QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = item->checkState() == Qt::Checked;
-                value != appConfig_->settings()->value(key_, defaultEnable_)){
-                appConfig_->settings()->setValue(key_, value);
-                emit appConfig_->configChanged(key_);
+                value != appConfig_->settings()->get(keys_, defaultEnable_)){
+                appConfig_->settings()->set(keys_, value);
+                emit appConfig_->configChanged(key());
             }
         });
     }
