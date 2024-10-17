@@ -36,30 +36,52 @@ ConfigExample::ConfigExample(QWidget *parent)
     });
 
     // UI generation example
+
+    // custom settings
+    {
+        auto settings = std::make_shared<MapSetting>();
+        auto appConfig = new AppConfig(this, settings);
+        auto attr1 = std::make_shared<ConfigItem<QString>>(appConfig, "attr1", "1");
+        auto attr2 = std::make_shared<ConfigItem<QString>>(appConfig, "attr2", "2");
+        auto attr3 = std::make_shared<ConfigItem<int>>(appConfig, "attr3", 3);
+        auto widget = new QWidget;
+        auto handler = appConfig->makeLayout(widget);
+        connect(addWidgetTab(scrolled(widget), "Variable Custom Settings"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+        connect(handler, &ApplyHandler::applyed, this, [=]{
+            qDebug() << settings->variantMap();
+            qDebug() << attr1->get();
+            qDebug() << attr2->get();
+            qDebug() << attr3->get();
+        });
+    }
+
+    // json settings
     {
         class CustomConfig : public AppConfig
         {
         public:
-            CustomConfig(QObject *parent, std::shared_ptr<MapSetting> settings) :
+            CustomConfig(QObject *parent, std::shared_ptr<JsonSetting> settings) :
                 AppConfig(parent, settings){
             }
 
             ADD_CONFIG(QString, attr1, "test1")
             ADD_CONFIG(QString, attr2, "test2")
-            ADD_CONFIG(int, attr3, 42)
-            ADD_CONFIG(int, attr4, 43)
+            ADD_GROUP(number)
+            ADD_CONFIG(int, attr3, 42, number)
+            ADD_CONFIG(int, attr4, 43, number)
         };
-        auto settings = std::make_shared<MapSetting>();
+        auto settings = std::make_shared<JsonSetting>();
+        settings->setObject(QJsonObject({
+                                         {"attr1", "json"}
+        }));
         auto custom = new CustomConfig(this, settings);
         auto widget = new QWidget;
         auto handler = custom->makeLayout(widget);
-        connect(addWidgetTab(scrolled(widget), "Custom Settings"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+        connect(addWidgetTab(scrolled(widget), "JSON Custom Settings"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
         connect(handler, &ApplyHandler::applyed, this, [=]{
-            qDebug() << settings->variantMap();
+            qDebug() << settings->object();
         });
-
     }
-
 
     // Group Box Style
     {

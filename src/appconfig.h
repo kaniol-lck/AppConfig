@@ -15,6 +15,7 @@
 #include <QTreeView>
 #include <type_traits>
 #include <QLabel>
+#include <QJsonObject>
 
 #define OVERRIDE(_1, _2, _3, _4, NAME, ...) NAME
 
@@ -78,10 +79,10 @@ private:
 class MapSetting : public VariantContainer
 {
 public:
-    virtual QVariant get(const QStringList &keys, const QVariant &defaultVal)override{
+    virtual QVariant get(const QStringList &keys, const QVariant &defaultVal) override{
         return map_.value(keys.join("/"), defaultVal);
     }
-    virtual void set(const QStringList &keys, const QVariant &value){
+    virtual void set(const QStringList &keys, const QVariant &value) override{
         map_.insert(keys.join("/"), value);
     }
 
@@ -92,6 +93,49 @@ public:
 
 private:
     QVariantMap map_;
+};
+
+class JsonSetting : public VariantContainer
+{
+public:
+    QVariant get(const QStringList &keys, const QVariant &defaultVal) override
+    {
+        QVariant v = object_.toVariantMap();
+        for(auto &&key : keys){
+            if(v.toMap().contains(key))
+                v = v.toMap().value(key);
+            else
+                return defaultVal;
+        }
+        return v;
+    }
+    void set(const QStringList &keys, const QVariant &value) override
+    {
+        modifyJsonObject(object_, keys, value);
+    }
+
+    static void modifyJsonObject(QJsonObject &object, QStringList keys, const QVariant &value){
+        auto key = keys.takeFirst();
+        if(keys.isEmpty())
+            object.insert(key, value.toJsonValue());
+        else {
+            auto obj = object.value(key).toObject();
+            modifyJsonObject(obj, keys, value);
+            object.insert(key, obj);
+        }
+    }
+    QJsonObject object() const
+    {
+        return object_;
+    }
+
+    void setObject(const QJsonObject &newObject)
+    {
+        object_ = newObject;
+    }
+
+private:
+    QJsonObject object_;
 };
 
 class AppConfig;
