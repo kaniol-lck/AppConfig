@@ -20,6 +20,7 @@ public:
     virtual void genWidget(QWidget *parentWidget) = 0;
     virtual T get() = 0;
     virtual void set(const T &val) = 0;
+    virtual void setHint(const QString &hint) = 0;
     virtual QWidget *widget() = 0;
 };
 
@@ -40,8 +41,9 @@ public:
         return widget_;
     }
 
-    virtual T get() override{};
-    virtual void set(const T &val) override{};
+    virtual T get() override{ return {}; };
+    virtual void set(const T &val[[maybe_unused]]) override{};
+    virtual void setHint(const QString &hint[[maybe_unused]]) override{};
 private:
     WidgetT *widget_;
 };
@@ -107,6 +109,10 @@ public:
     void set(const QString &value) override
     {
         widgetT()->setText(value);
+    }
+    void setHint(const QString &hint) override
+    {
+        widgetT()->setPlaceholderText(hint);
     }
 };
 
@@ -261,4 +267,4 @@ private:
 };
 
 
-#endif // CONFIGWRAPPERwidgetT()H
+#endif // CONFIGWRAPPERWIDGET_H

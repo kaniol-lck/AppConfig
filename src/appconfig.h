@@ -176,13 +176,18 @@ public:
 
     QString displayName() const;
 
+    QString tooltip() const;
+    void setTooltip(const QString &newTooltip);
+
 protected:
     QString name_;
+    QString tooltip_;
     QStringList keys_;
     QList<CommonNode*> list_;
     AppConfig *appConfig_;
 
 protected:
+    QLabel *makeLabel(QWidget *parent);
     virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);
     virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false);
     virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false);
@@ -323,8 +328,18 @@ public:
         generator_ = newGenerator;
     }
 
+    QString hint() const
+    {
+        return hint_;
+    }
+    void setHint(const QString &newHint)
+    {
+        hint_ = newHint;
+    }
+
 private:
     T defaultVal_;
+    QString hint_;
     std::shared_ptr<Generator<T>> generator_;
 
 private:
@@ -347,6 +362,7 @@ protected:
         wrapper->genWidget(parentWidget);
         if(generator_) generator_->applyAttrSetter(wrapper->widget());
         wrapper->set(get());
+        wrapper->setHint(hint());
 
         QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
             if(auto value = wrapper->get();
@@ -369,18 +385,20 @@ protected:
         }
 
         auto widget = applyWidgetConfig(handler, parentWidget);
-        layout->addRow(displayName(), widget);
+        layout->addRow(makeLabel(parentWidget), widget);
         return widget;
     }
     QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle[[maybe_unused]]) override
     {
-        auto item1 = new QStandardItem(displayName());
+        auto item1 = new QStandardItem();
         auto item2 = new QStandardItem();
         model->appendRow({ item1, item2 });
 
-        auto index = model->indexFromItem(item2);
+        auto index1 = model->indexFromItem(item1);
+        auto index2 = model->indexFromItem(item2);
         auto widget = applyWidgetConfig(handler, view);
-        view->setIndexWidget(index, widget);
+        view->setIndexWidget(index1, makeLabel(view));
+        view->setIndexWidget(index2, widget);
         return item2;
     };
     virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle[[maybe_unused]]) override
@@ -392,9 +410,11 @@ protected:
         else
             model->appendRow({ item1, item2 });
 
-        auto index = model->indexFromItem(item2);
+        auto index1 = model->indexFromItem(item1);
+        auto index2 = model->indexFromItem(item2);
         auto widget = applyWidgetConfig(handler, view);
-        view->setIndexWidget(index, widget);
+        view->setIndexWidget(index1, makeLabel(view));
+        view->setIndexWidget(index2, widget);
         return item2;
     }
 };

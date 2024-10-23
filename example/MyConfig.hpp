@@ -64,6 +64,10 @@ public:
         download.setName(tr("Download Settings"));
         // ...
 
+        common.setTooltip("This is a tooltip on title");
+        common_set1.setTooltip("This is a tooltip");
+        common_set1.setHint("This is a hint");
+
         common_set2.setGenerator<ComboBoxWrapper>(QStringList{ "item1", "item2", "item3" });
 
         auto filePath = WrapperGenerator<FilePathWrapper, QString>::makePtr("Select image files plz", "*.jpg;*.png");

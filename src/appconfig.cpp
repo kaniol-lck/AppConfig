@@ -1,21 +1,24 @@
 #include "appconfig.h"
 
+#include <QLabel>
+
 QWidget *CommonNode::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
     //title - group
     auto text = name_.isEmpty()? key() : name_;
-    QWidget *groupBox;
-    if(showTitle)
-        groupBox = new QGroupBox(text, parentWidget);
-    else
-        groupBox = new QWidget(parentWidget);
+    QWidget *widget;
+    if(showTitle){
+        auto groupBox = new QGroupBox(text, parentWidget);
+        widget = groupBox;
+    } else
+        widget = new QWidget(parentWidget);
 
-    layout->setWidget(layout->rowCount(), QFormLayout::SpanningRole, groupBox);
-    layout = new QFormLayout(groupBox);
-    groupBox->setLayout(layout);
+    layout->setWidget(layout->rowCount(), QFormLayout::SpanningRole, widget);
+    layout = new QFormLayout(widget);
+    widget->setLayout(layout);
     for(auto &&subNode : list_)
-        subNode->makeLayout(handler, groupBox, layout, true);
-    return groupBox;
+        subNode->makeLayout(handler, widget, layout, true);
+    return widget;
 }
 
 QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle)
@@ -24,9 +27,11 @@ QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view
     auto text = name_.isEmpty()? key() : name_;
     QStandardItem *item = nullptr;
     if(showTitle){
-        item = new QStandardItem(text);
+        item = new QStandardItem();
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
         model->appendRow(item);
+        auto index = model->indexFromItem(item);
+        view->setIndexWidget(index, makeLabel(view));
         view->setSpan(model->rowCount() - 1, 0, 1, 2);
     }
 
@@ -47,6 +52,8 @@ QStandardItem *CommonNode::makeTreeView(ApplyHandler *handler, QTreeView *view, 
             model->itemFromIndex(parent)->appendRow(item);
         else
             model->appendRow(item);
+        auto index = model->indexFromItem(item);
+        view->setIndexWidget(index, makeLabel(view));
         view->setFirstColumnSpanned(model->rowCount(parent) - 1, parent, true);
         parent = model->indexFromItem(item);
     }
@@ -157,6 +164,29 @@ void CommonNode::setName(const QString &newName)
 QString CommonNode::displayName() const
 {
     return name_.isEmpty()? key() : name_;
+}
+
+QString CommonNode::tooltip() const
+{
+    return tooltip_;
+}
+
+void CommonNode::setTooltip(const QString &newTooltip)
+{
+    tooltip_ = newTooltip;
+}
+
+QLabel *CommonNode::makeLabel(QWidget *parent)
+{
+    auto label = new QLabel(parent);
+    auto &&tt = tooltip();
+    if(tt.isEmpty()){
+        label->setText(displayName());
+    } else{
+        label->setText(displayName() + R"(<span style="color:red">[?]</span>)");
+        label->setToolTip(tt);
+    }
+    return label;
 }
 
 
