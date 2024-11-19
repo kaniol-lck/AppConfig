@@ -18,6 +18,8 @@ class Wrapper
 {
 public:
     virtual void genWidget(QWidget *parentWidget) = 0;
+    // return if name has been used
+    virtual bool setName(const QString &name) = 0;
     virtual T get() = 0;
     virtual void set(const T &val) = 0;
     virtual void setHint(const QString &hint) = 0;
@@ -32,6 +34,12 @@ public:
     {
         widget_ = new WidgetT(parentWidget);
     }
+
+    virtual bool setName(const QString &name[[maybe_unused]]) override
+    {
+        return false;
+    }
+
     WidgetT *widgetT()
     {
         return widget_;
@@ -145,6 +153,12 @@ public:
 class CheckBoxWrapper : public WidgetWrapper<QCheckBox, bool>
 {
 public:
+    bool setName(const QString &name) override
+    {
+        widgetT()->setText(name);
+        return true;
+    }
+
     bool get() override
     {
         return widgetT()->isChecked();

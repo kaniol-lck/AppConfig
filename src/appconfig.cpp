@@ -27,11 +27,14 @@ QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view
     auto text = name_.isEmpty()? key() : name_;
     QStandardItem *item = nullptr;
     if(showTitle){
-        item = new QStandardItem();
+        item = new QStandardItem(text);
         item->setData(Qt::AlignCenter, Qt::TextAlignmentRole);
+        if(auto tt = tooltip(); !tt.isEmpty()){
+            item->setToolTip(tt);
+        }
         model->appendRow(item);
-        auto index = model->indexFromItem(item);
-        view->setIndexWidget(index, makeLabel(view));
+        // auto index = model->indexFromItem(item);
+        // view->setIndexWidget(index, makeLabel(view));
         view->setSpan(model->rowCount() - 1, 0, 1, 2);
     }
 

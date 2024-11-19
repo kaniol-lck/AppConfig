@@ -352,7 +352,7 @@ protected:
         qDebug() << "changed";
     };
 
-    QWidget *applyWidgetConfig(ApplyHandler *handler, QWidget *parentWidget)
+    std::tuple<bool, QWidget*> applyWidgetConfig(ApplyHandler *handler, QWidget *parentWidget, bool useName = false)
     {
         std::shared_ptr<Wrapper<T>> wrapper;
         if(!generator_)
@@ -360,6 +360,9 @@ protected:
         else
             wrapper = generator_->genWrapper();
         wrapper->genWidget(parentWidget);
+        bool b = false;
+        if(useName)
+            b = wrapper->setName(displayName());
         if(generator_) generator_->applyAttrSetter(wrapper->widget());
         wrapper->set(get());
         wrapper->setHint(hint());
@@ -371,7 +374,7 @@ protected:
                 emit appConfig_->configChanged(key());
             }
         });
-        return wrapper->widget();
+        return { b, wrapper->widget() };
     }
 
     QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle[[maybe_unused]]) override
@@ -384,8 +387,12 @@ protected:
             return label;
         }
 
-        auto widget = applyWidgetConfig(handler, parentWidget);
-        layout->addRow(makeLabel(parentWidget), widget);
+        auto [b, widget] = applyWidgetConfig(handler, parentWidget, true);
+        if(b){
+            layout->addRow(widget);
+        } else {
+            layout->addRow(makeLabel(parentWidget), widget);
+        }
         return widget;
     }
     QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle[[maybe_unused]]) override
@@ -396,7 +403,7 @@ protected:
 
         auto index1 = model->indexFromItem(item1);
         auto index2 = model->indexFromItem(item2);
-        auto widget = applyWidgetConfig(handler, view);
+        auto [b, widget] = applyWidgetConfig(handler, view);
         view->setIndexWidget(index1, makeLabel(view));
         view->setIndexWidget(index2, widget);
         return item2;
@@ -412,7 +419,7 @@ protected:
 
         auto index1 = model->indexFromItem(item1);
         auto index2 = model->indexFromItem(item2);
-        auto widget = applyWidgetConfig(handler, view);
+        auto [b, widget] = applyWidgetConfig(handler, view);
         view->setIndexWidget(index1, makeLabel(view));
         view->setIndexWidget(index2, widget);
         return item2;

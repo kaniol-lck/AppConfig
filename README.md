@@ -18,4 +18,4 @@ include(AppConfig/AppConfig.pri)
 
 ## Usage
 
-See `\example`.
+See [example](./example/configexample.cpp).
