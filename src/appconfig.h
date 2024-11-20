@@ -162,6 +162,9 @@ public:
     ApplyHandler *makeLayout(QWidget *widget, bool showTitle = false);
     ApplyHandler *makeLayout(ApplyHandler *handler, QWidget *widget, bool showTitle = false);
 
+    ApplyHandler *makeLayout2(QWidget *widget, bool showTitle = false);
+    ApplyHandler *makeLayout2(ApplyHandler *handler, QWidget *widget, bool showTitle = false);
+
     ApplyHandler *makeTableView(QTableView *view, bool showTitle = false);
     ApplyHandler *makeTableView(ApplyHandler *handler, QTableView *view, bool showTitle = false);
 
@@ -189,6 +192,7 @@ protected:
 protected:
     QLabel *makeLabel(QWidget *parent);
     virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle);
+    virtual QWidget *makeLayout2(ApplyHandler *handler, QWidget *parentWidget, QVBoxLayout *layout, bool showTitle);
     virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false);
     virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false);
 };
@@ -253,6 +257,7 @@ public:
 protected:
     bool defaultEnable_;
     virtual QWidget *makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle) override;
+    virtual QWidget *makeLayout2(ApplyHandler *handler, QWidget *parentWidget, QVBoxLayout *layout, bool showTitle) override;
     virtual QStandardItem *makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle = false) override;
     virtual QStandardItem *makeTreeView(ApplyHandler *handler, QTreeView *view, QStandardItemModel *model, QModelIndex parent, bool showTitle = false) override;
 };
@@ -392,6 +397,25 @@ protected:
             layout->addRow(widget);
         } else {
             layout->addRow(makeLabel(parentWidget), widget);
+        }
+        return widget;
+    }
+    QWidget *makeLayout2(ApplyHandler *handler, QWidget *parentWidget, QVBoxLayout *layout, bool showTitle[[maybe_unused]]) override
+    {
+        if(isEmpty){
+            auto label = new QLabel(QString("WARNING: %1 has no default widget to config")
+                                        .arg(key()), parentWidget);
+            label->setStyleSheet("color: red;");
+            layout->addWidget(label);
+            return label;
+        }
+
+        auto [b, widget] = applyWidgetConfig(handler, parentWidget, true);
+        if(b){
+            layout->addWidget(widget);
+        } else {
+            layout->addWidget(makeLabel(parentWidget));
+            layout->addWidget(widget);
         }
         return widget;
     }

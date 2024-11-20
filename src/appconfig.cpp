@@ -21,6 +21,25 @@ QWidget *CommonNode::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QF
     return widget;
 }
 
+QWidget *CommonNode::makeLayout2(ApplyHandler *handler, QWidget *parentWidget, QVBoxLayout *layout, bool showTitle)
+{
+    //title - group
+    auto text = name_.isEmpty()? key() : name_;
+    QWidget *widget;
+    if(showTitle){
+        auto groupBox = new QGroupBox(text, parentWidget);
+        widget = groupBox;
+    } else
+        widget = new QWidget(parentWidget);
+
+    layout->addWidget(widget);
+    layout = new QVBoxLayout(widget);
+    widget->setLayout(layout);
+    for(auto &&subNode : list_)
+        subNode->makeLayout2(handler, widget, layout, true);
+    return widget;
+}
+
 QStandardItem *CommonNode::makeTableView(ApplyHandler *handler, QTableView *view, QStandardItemModel *model, bool showTitle)
 {
     //title - group
@@ -97,6 +116,20 @@ ApplyHandler *CommonNode::makeLayout(ApplyHandler *handler, QWidget *widget, boo
     auto layout = new QFormLayout(widget);
     widget->setLayout(layout);
     makeLayout(handler, widget, layout, showTitle);
+    return handler;
+}
+
+ApplyHandler *CommonNode::makeLayout2(QWidget *widget, bool showTitle)
+{
+    auto handler = new ApplyHandler(appConfig_);
+    return makeLayout2(handler, widget, showTitle);
+}
+
+ApplyHandler *CommonNode::makeLayout2(ApplyHandler *handler, QWidget *widget, bool showTitle)
+{
+    auto layout = new QVBoxLayout(widget);
+    widget->setLayout(layout);
+    makeLayout2(handler, widget, layout, showTitle);
     return handler;
 }
 
@@ -258,6 +291,24 @@ ConfigListener *CheckableConfigGroup::checkListener()
 QWidget *CheckableConfigGroup::makeLayout(ApplyHandler *handler, QWidget *parentWidget, QFormLayout *layout, bool showTitle)
 {
     auto widget = ConfigGroup::makeLayout(handler, parentWidget, layout, showTitle);
+    if(showTitle){
+        auto groupBox = qobject_cast<QGroupBox*>(widget);
+        groupBox->setCheckable(true);
+        groupBox->setChecked(get());
+        QObject::connect(handler, &ApplyHandler::applyed, [=, this]{
+            if(auto value = groupBox->isChecked();
+                value != appConfig_->settings()->get(keys_, defaultEnable_)){
+                appConfig_->settings()->set(keys_, value);
+                emit appConfig_->configChanged(key());
+            }
+        });
+    }
+    return widget;
+}
+
+QWidget *CheckableConfigGroup::makeLayout2(ApplyHandler *handler, QWidget *parentWidget, QVBoxLayout *layout, bool showTitle)
+{
+    auto widget = ConfigGroup::makeLayout2(handler, parentWidget, layout, showTitle);
     if(showTitle){
         auto groupBox = qobject_cast<QGroupBox*>(widget);
         groupBox->setCheckable(true);

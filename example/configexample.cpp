@@ -90,6 +90,13 @@ ConfigExample::ConfigExample(QWidget *parent)
         connect(addWidgetTab(scrolled(widget), "Group Box Style"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
     }
 
+    // Group Box Style 2
+    {
+        auto widget = new QWidget;
+        auto handler = config->makeLayout2(widget);
+        connect(addWidgetTab(scrolled(widget), "Group Box Style (Line)"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
+    }
+
     // Table View Style
     {
         auto view = new QTableView;
