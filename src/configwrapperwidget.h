@@ -172,26 +172,36 @@ public:
 class ComboBoxWrapper : public WidgetWrapper<QComboBox, int>
 {
 public:
-    ComboBoxWrapper(const QStringList &items):
-        items_(items)
+    ComboBoxWrapper(const QStringList &items)
+    {
+        for(int i = 0; i < items.count(); i++)
+            itemMap_[i] = items.at(i);
+    }
+
+    ComboBoxWrapper(const QMap<int, QString> &itemMap):
+        itemMap_(itemMap)
     {}
 
     void genWidget(QWidget *parentWidget) override
     {
         WidgetWrapper<QComboBox, int>::genWidget(parentWidget);
-        widgetT()->addItems(items_);
+        for(auto &&[i, item] : itemMap_.asKeyValueRange())
+            widgetT()->addItem(item, i);
     }
 
     int get() override
     {
-        return widgetT()->currentIndex();
+        return widgetT()->currentData().toInt();
     }
     void set(const int &value) override
     {
-        widgetT()->setCurrentIndex(value);
+        for(auto i = 0; i < widgetT()->count(); i++){
+            if(widgetT()->itemData(i) == value)
+                widgetT()->setCurrentIndex(i);
+        }
     }
 private:
-    QStringList items_;
+    QMap<int, QString> itemMap_;
 };
 
 class FilePathWrapper : public WidgetWrapper<QWidget, QString>
