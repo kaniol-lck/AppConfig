@@ -52,7 +52,7 @@ public:
     virtual T get() override{ return {}; };
     virtual void set(const T &val[[maybe_unused]]) override{};
     virtual void setHint(const QString &hint[[maybe_unused]]) override{};
-private:
+protected:
     WidgetT *widget_;
 };
 
@@ -196,12 +196,49 @@ public:
     void set(const int &value) override
     {
         for(auto i = 0; i < widgetT()->count(); i++){
-            if(widgetT()->itemData(i) == value)
+            if(widgetT()->itemData(i).toInt() == value)
                 widgetT()->setCurrentIndex(i);
         }
     }
 private:
     QMap<int, QString> itemMap_;
+};
+
+class ComboBoxStrWrapper : public WidgetWrapper<QComboBox, QString>
+{
+public:
+    ComboBoxStrWrapper(const QStringList &items, const QStringList &strs) :
+        wrapper_(items)
+    {
+        for(int i = 0; i < strs.count(); i++)
+            strMap_[i] = strs.at(i);
+    }
+
+    ComboBoxStrWrapper(const QMap<int, QString> &itemMap, const QMap<int, QString> &strMap):
+        wrapper_(itemMap),
+        strMap_(strMap)
+    {}
+
+    void genWidget(QWidget *parentWidget) override
+    {
+        wrapper_.genWidget(parentWidget);
+        widget_ = wrapper_.widgetT();
+    }
+
+    QString get() override
+    {
+        if(auto i = wrapper_.get(); strMap_.contains(i))
+            return strMap_.value(i);
+        return {};
+    }
+    void set(const QString &value) override
+    {
+        for(auto &&[i, str] : strMap_.asKeyValueRange())
+            if(value == str) wrapper_.set(i);
+    }
+private:
+    ComboBoxWrapper wrapper_;
+    QMap<int, QString> strMap_;
 };
 
 class FilePathWrapper : public WidgetWrapper<QWidget, QString>

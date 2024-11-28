@@ -42,8 +42,10 @@ ConfigExample::ConfigExample(QWidget *parent)
         auto settings = std::make_shared<MapSetting>();
         auto appConfig = new AppConfig(this, settings);
         auto attr1 = std::make_shared<ConfigItem<QString>>(appConfig, "attr1", "1");
-        auto attr2 = std::make_shared<ConfigItem<QString>>(appConfig, "attr2", "2");
+        auto attr2 = std::make_shared<ConfigItem<QString>>(appConfig, "attr2", "i2");
         auto attr3 = std::make_shared<ConfigItem<int>>(appConfig, "attr3", 3);
+        attr2->setGenerator<ComboBoxStrWrapper>(QStringList{ "item1", "item2" },
+                                                QStringList{ "i1", "i2" });
         auto widget = new QWidget;
         auto handler = appConfig->makeLayout(widget);
         connect(addWidgetTab(scrolled(widget), "Variable Custom Settings"), &QPushButton::clicked, handler, &ApplyHandler::applyed);
