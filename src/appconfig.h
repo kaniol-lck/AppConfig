@@ -342,6 +342,11 @@ public:
         hint_ = newHint;
     }
 
+    std::shared_ptr<Generator<T> > generator() const
+    {
+        return generator_;
+    }
+
 private:
     T defaultVal_;
     QString hint_;
